@@ -7,36 +7,55 @@ jobs:
   build-wasm:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Emscripten
+      - name: Install emsdk
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 4.0.3
+          version: 4.0.23
+          actions-cache-folder: 'emsdk-cache'
 
-      - name: Verify emcc
-        run: emcc --version
+      - name: View emsdk version
+        run: |
+          emcc -v
+          echo "--------------------"
+          emcc --check
 
-      - name: Build WASM with hotwords
+      - name: Build sherpa-onnx for WebAssembly (ASR) with hotwords
         run: |
           export SHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON
           export SHERPA_ONNX_ENABLE_HOTWORDS=ON
           export SHERPA_ONNX_WASM_EXPORT_FS=ON
+          export SHERPA_ONNX_IS_USING_BUILD_WASM_SH=ON
+          export EMSCRIPTEN=$(dirname $(realpath $(which emcc)))
 
-          mkdir -p build-wasm-simd
-          cd build-wasm-simd
+          mkdir -p build-wasm-simd-asr
+          cd build-wasm-simd-asr
 
-          emcmake cmake .. \
+          cmake \
+            -DCMAKE_INSTALL_PREFIX=./install \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$EMSCRIPTEN/cmake/Modules/Platform/Emscripten.cmake \
+            -DSHERPA_ONNX_ENABLE_PYTHON=OFF \
+            -DSHERPA_ONNX_ENABLE_TESTS=OFF \
+            -DSHERPA_ONNX_ENABLE_CHECK=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSHERPA_ONNX_ENABLE_PORTAUDIO=OFF \
+            -DSHERPA_ONNX_ENABLE_JNI=OFF \
+            -DSHERPA_ONNX_ENABLE_C_API=ON \
+            -DSHERPA_ONNX_ENABLE_TTS=OFF \
+            -DSHERPA_ONNX_ENABLE_WEBSOCKET=OFF \
+            -DSHERPA_ONNX_ENABLE_GPU=OFF \
+            -DSHERPA_ONNX_ENABLE_WASM=ON \
+            -DSHERPA_ONNX_ENABLE_WASM_ASR=ON \
+            -DSHERPA_ONNX_ENABLE_BINARY=OFF \
+            -DSHERPA_ONNX_LINK_LIBSTDCPP_STATICALLY=OFF \
             -DSHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON \
             -DSHERPA_ONNX_ENABLE_HOTWORDS=ON \
             -DSHERPA_ONNX_WASM_EXPORT_FS=ON \
-            -DSHERPA_ONNX_ENABLE_WASM=ON \
-            -DSHERPA_ONNX_ENABLE_WASM_MAIN_VAD_ASR=ON \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./install
+            ..
 
-          make -j$(nproc)
+          make -j2
           make install
 
       - name: Upload WASM artifacts
@@ -44,6 +63,6 @@ jobs:
         with:
           name: sherpa-onnx-wasm-hotwords
           path: |
-            build-wasm-simd/install/**/*.wasm
-            build-wasm-simd/install/**/*.js
+            build-wasm-simd-asr/install/bin/wasm/asr/**/*.wasm
+            build-wasm-simd-asr/install/bin/wasm/asr/**/*.js
           compression-level: 0
