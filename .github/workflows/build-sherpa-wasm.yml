@@ -15,18 +15,35 @@ jobs:
         with:
           version: 4.0.3
 
+      - name: Verify emcc
+        run: emcc --version
+
       - name: Build WASM with hotwords
         run: |
           export SHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON
           export SHERPA_ONNX_ENABLE_HOTWORDS=ON
           export SHERPA_ONNX_WASM_EXPORT_FS=ON
-          bash build-wasm-simd.sh
+
+          mkdir -p build-wasm-simd
+          cd build-wasm-simd
+
+          emcmake cmake .. \
+            -DSHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON \
+            -DSHERPA_ONNX_ENABLE_HOTWORDS=ON \
+            -DSHERPA_ONNX_WASM_EXPORT_FS=ON \
+            -DSHERPA_ONNX_ENABLE_WASM=ON \
+            -DSHERPA_ONNX_ENABLE_WASM_MAIN_VAD_ASR=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=./install
+
+          make -j$(nproc)
+          make install
 
       - name: Upload WASM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: sherpa-onnx-wasm-hotwords
           path: |
-            build-wasm-simd/**/*.wasm
-            build-wasm-simd/**/*.js
+            build-wasm-simd/install/**/*.wasm
+            build-wasm-simd/install/**/*.js
           compression-level: 0
