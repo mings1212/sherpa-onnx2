@@ -21,6 +21,19 @@ jobs:
           echo "--------------------"
           emcc --check
 
+      - name: Download model files
+        run: |
+          cd wasm/asr/assets
+          wget -q https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
+          tar xvf sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
+          rm sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20.tar.bz2
+          mv sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/encoder-epoch-99-avg-1.int8.onnx encoder.onnx
+          mv sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/decoder-epoch-99-avg-1.onnx decoder.onnx
+          mv sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/joiner-epoch-99-avg-1.int8.onnx joiner.onnx
+          mv sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/tokens.txt ./
+          rm -rf sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/
+          ls -lh
+
       - name: Build sherpa-onnx for WebAssembly (ASR) with hotwords
         run: |
           export SHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON
