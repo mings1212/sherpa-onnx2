@@ -1,0 +1,32 @@
+name: Build sherpa-onnx WASM with hotwords support
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.3
+
+      - name: Build WASM with hotwords
+        run: |
+          export SHERPA_ONNX_ENABLE_MODIFIED_BEAM_SEARCH=ON
+          export SHERPA_ONNX_ENABLE_HOTWORDS=ON
+          export SHERPA_ONNX_WASM_EXPORT_FS=ON
+          bash build-wasm-simd.sh
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sherpa-onnx-wasm-hotwords
+          path: |
+            build-wasm-simd/**/*.wasm
+            build-wasm-simd/**/*.js
+          compression-level: 0
